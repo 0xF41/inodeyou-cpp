@@ -1,1 +1,0 @@
-/usr/bin/c++ CMakeFiles/inodeyou.dir/src/main.cpp.o CMakeFiles/inodeyou.dir/src/fs/fs_walk_path.cpp.o CMakeFiles/inodeyou.dir/src/fs/populate_fs_inodes.cpp.o CMakeFiles/inodeyou.dir/src/tsk/tsk_walk_path.cpp.o CMakeFiles/inodeyou.dir/src/tsk/populate_tsk_inodes.cpp.o CMakeFiles/inodeyou.dir/src/utils/sync_and_cache.cpp.o -o inodeyou  /usr/lib/x86_64-linux-gnu/libtsk.so
