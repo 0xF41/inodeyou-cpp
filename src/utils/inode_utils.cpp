@@ -29,9 +29,9 @@ std::unordered_set<int> find_differences(const std::unordered_set<int> &tsk_inod
  */
 void print_result(const std::unordered_set<int> &diff_inodes) {
     if (diff_inodes.empty()) {
-        cout << "No differences found between TSK and filesystem inodes." << endl;
+        cout << "[OK] No differences found between TSK and filesystem inodes." << endl;
     } else {
-        cout << "The following files may be hidden by malware:" << endl;
+        cout << "[WARNING] The following files may be hidden by malware:" << endl;
         for (const auto &inode : diff_inodes) {
             cout << inode << endl;
         }
