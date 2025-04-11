@@ -18,6 +18,8 @@ set(SOURCES
     src/tsk/tsk_walk_path.cpp
     src/tsk/populate_tsk_inodes.cpp
     src/utils/sync_and_cache.cpp
+    src/utils/common.cpp
+    src/utils/inode_utils.cpp
 )
 
 # Find and link the Sleuth Kit library
