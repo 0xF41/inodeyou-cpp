@@ -1,2 +1,3 @@
 # inodeyou-cpp
-A tool that detects files and directories that may be hidden by trojan and rootkits on Unix platforms
+
+**inodeyou-cpp** is a proof-of-concept to detect files and directories that are hidden by malware on unix systems.
