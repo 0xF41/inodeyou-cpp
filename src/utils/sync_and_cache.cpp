@@ -3,6 +3,9 @@
 
 using namespace std;
 
+/**
+ * Syncs the filesystem to ensure all data is written to disk.
+ */
 void sync_filesystem() {
     int sync_status = system("/bin/sync");
     if (sync_status != 0) {
@@ -10,6 +13,9 @@ void sync_filesystem() {
     }
 }
 
+/**
+ * Drops the filesystem caches to free up memory.
+ */
 void drop_caches() {
     int drop_cache_status = system("sh -c 'echo 3 > /proc/sys/vm/drop_caches'");
     if (drop_cache_status != 0) {
