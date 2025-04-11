@@ -2,10 +2,9 @@
 #include <cstring>
 #include <dirent.h>
 #include <unordered_set>
+#include <string>
 
 using namespace std;
-
-const int MAX_BUF = 256;
 
 /**
  * Recursively walks through the directory structure starting from the given mount point
@@ -36,9 +35,8 @@ void fs_walk_path(const char *mount_point, const char *root, unordered_set<int> 
             {
                 continue;
             }
-            char path[MAX_BUF];
-            snprintf(path, sizeof(path), "%s/%s", mount_point, entry->d_name);
-            fs_walk_path(path, root, fs_inode_set); // Recursively walk the subdirectory
+            string path = string(mount_point) + "/" + entry->d_name;
+            fs_walk_path(path.c_str(), root, fs_inode_set); // Recursively walk the subdirectory
         }
         // Regular file or symbolic link
         else if (entry->d_type == DT_REG || entry->d_type == DT_LNK)
