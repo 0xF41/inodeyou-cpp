@@ -25,13 +25,16 @@ void drop_caches() {
 }
 
 /**
- * Check if the provided path is valid.
+ * Check if the provided path is valid (directory or file).
  * @param path Path to check
  * @return True if the path is valid, false otherwise
  */
-bool is_valid_path(const char *path) {
+bool is_valid_path(const std::string &path) {
     struct stat buffer;
-    return (stat(path, &buffer) == 0);
+    if (stat(path.c_str(), &buffer) != 0) {
+        return false;
+    }
+    return S_ISDIR(buffer.st_mode) || S_ISREG(buffer.st_mode);
 }
 
 /**
@@ -41,9 +44,8 @@ bool is_valid_path(const char *path) {
  * @param err_msg Error message to display if the path is invalid
  * @return True if the path is valid, false otherwise
  */
-bool checkArgv(char param[MAX_BUF], char *arg, char *err_msg) {
-    strncpy(param, arg, MAX_BUF - 1);
-    param[MAX_BUF - 1] = '\0';
+bool checkArgv(std::string &param, const char *arg, const std::string &err_msg) {
+    param = arg;
     if (!is_valid_path(param)) {
         cerr << "Error: Invalid " << err_msg << " path provided: " << param << endl;
         return false;

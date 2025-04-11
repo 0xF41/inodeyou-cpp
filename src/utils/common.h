@@ -2,7 +2,7 @@
 #define COMMON_H
 
 #include <iostream>
-#include <cstring>
+#include <string>
 #include <unordered_set>
 
 const int MAX_BUF = 256;
@@ -10,7 +10,7 @@ const int MAX_BUF = 256;
 // Function prototypes for common utility functions
 void sync_filesystem();
 void drop_caches();
-bool is_valid_path(const char *path);
-bool checkArgv(char param[MAX_BUF], char *arg, char *err_msg);
+bool is_valid_path(const std::string &path);
+bool checkArgv(std::string &param, const char *arg, const std::string &err_msg);
 
 #endif // COMMON_H
