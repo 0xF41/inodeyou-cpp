@@ -10,8 +10,6 @@
 
 using namespace std;
 
-const int MAX_BUF = 256;
-
 // Helper function to validate if a path exists
 bool is_valid_path(const char *path)
 {

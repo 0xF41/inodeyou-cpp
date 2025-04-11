@@ -1,0 +1,3 @@
+/home/faiyew/Documents/tools/inodeyou-cpp/build/CMakeFiles/inodeyou.dir
+/home/faiyew/Documents/tools/inodeyou-cpp/build/CMakeFiles/edit_cache.dir
+/home/faiyew/Documents/tools/inodeyou-cpp/build/CMakeFiles/rebuild_cache.dir
