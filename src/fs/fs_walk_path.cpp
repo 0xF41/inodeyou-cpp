@@ -37,8 +37,8 @@ void fs_walk_path(const char *inode_fpn, unordered_set<int> &fs_inode_set)
             string path = string(inode_fpn) + "/" + entry->d_name;
             fs_walk_path(path.c_str(), fs_inode_set); // Recursively walk the subdirectory
         }
-        // Regular file or symbolic link
-        else if (entry->d_type == DT_REG || entry->d_type == DT_LNK)
+        // Regular file
+        else if (entry->d_type == DT_REG)
         {
             inode_num = entry->d_ino;
             fs_inode_set.insert(inode_num);
