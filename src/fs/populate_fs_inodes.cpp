@@ -20,7 +20,7 @@ void populate_fs_inodes(const char *path, unordered_set<int> &fs_inode_set)
     if (statfs(path, &stat) == -1)
     {
         cerr << "Error: Failed to get filesystem statistics." << endl;
-        return;
+        exit(1);
     }
 
     fs_walk_path(path, fs_inode_set); // Recursively walk the directory structure

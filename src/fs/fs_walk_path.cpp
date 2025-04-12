@@ -19,7 +19,7 @@ void fs_walk_path(const char *inode_fpn, unordered_set<int> &fs_inode_set)
     if (folder == nullptr)
     {
         cerr << "fs_walk_path: Error: Failed to open directory." << endl;
-        return;
+        exit(1);
     }
 
     struct dirent *entry = nullptr;
