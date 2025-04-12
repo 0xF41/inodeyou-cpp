@@ -3,7 +3,7 @@
 
 #include <unordered_set>
 
-void fs_walk_path(const char *mount_point, const char *root, std::unordered_set<int> &fs_inode_set);
-void populate_fs_inodes(const char *mount_point, const char *root, std::unordered_set<int> &fs_inode_set);
+void fs_walk_path(const char *mount_point, std::unordered_set<int> &fs_inode_set);
+void populate_fs_inodes(const char *mount_point, std::unordered_set<int> &fs_inode_set);
 
 #endif // FS_WALK_PATH_H

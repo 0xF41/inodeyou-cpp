@@ -18,7 +18,7 @@ void tsk_walk_path(TSK_FS_INFO *fs, TSK_INUM_T dir_inode_num, std::unordered_set
     if (fs_dir == nullptr)
     {
         std::cerr << "tsk_walk_path: Error: Failed to open directory." << std::endl;
-        return;
+        exit(-1);
     }
 
     TSK_FS_FILE *fs_file = nullptr;
