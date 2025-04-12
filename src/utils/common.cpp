@@ -2,6 +2,8 @@
 #include <sys/stat.h>
 #include <cstdlib>
 #include <unistd.h>
+#include <iostream>
+#include <limits.h>
 
 using namespace std;
 
@@ -33,11 +35,22 @@ void drop_caches()
 bool is_valid_path(const std::string &path)
 {
     struct stat buffer;
-    if (stat(path.c_str(), &buffer) != 0)
+
+    // Use lstat to handle symbolic links
+    if (lstat(path.c_str(), &buffer) != 0)
     {
+        cerr << "Error: Failed to stat path '" << path << "'." << endl;
         return false;
     }
-    return S_ISDIR(buffer.st_mode) || S_ISREG(buffer.st_mode);
+
+    // Check for valid file types (directory, regular file, or symbolic link)
+    if (S_ISDIR(buffer.st_mode) || S_ISREG(buffer.st_mode) || S_ISLNK(buffer.st_mode))
+    {
+        return true;
+    }
+
+    cerr << "Error: Path '" << path << "' is not a valid directory, file, or symbolic link." << endl;
+    return false;
 }
 
 /**
@@ -49,11 +62,18 @@ bool is_valid_path(const std::string &path)
  */
 bool checkArgv(std::string &param, const char *arg, const std::string &err_msg)
 {
-    param = arg;
-    if (!is_valid_path(param))
+    if (arg == nullptr)
     {
-        cerr << "Error: Invalid " << err_msg << " path provided: " << param << endl;
+        cerr << "Error: " << err_msg << " argument is null." << endl;
         return false;
     }
+
+    if (!is_valid_path(arg))
+    {
+        cerr << "Error: " << err_msg << " path '" << arg << "' is invalid (does not exist or is not a file/directory)." << endl;
+        return false;
+    }
+
+    param = arg; // Assign only after validation succeeds
     return true;
 }
