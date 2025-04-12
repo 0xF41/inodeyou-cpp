@@ -19,7 +19,7 @@ void populate_fs_inodes(const char *path, unordered_set<int> &fs_inode_set)
     struct statfs stat;
     if (statfs(path, &stat) == -1)
     {
-        cerr << "Error: Failed to get filesystem statistics." << endl;
+        cerr << "[!] Error: Failed to get filesystem statistics. Ensure that " << path << " exists." << endl;
         exit(1);
     }
 

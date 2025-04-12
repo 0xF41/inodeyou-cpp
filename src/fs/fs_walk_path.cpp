@@ -18,7 +18,7 @@ void fs_walk_path(const char *inode_fpn, unordered_set<int> &fs_inode_set)
     DIR *folder = opendir(inode_fpn);
     if (folder == nullptr)
     {
-        cerr << "fs_walk_path: Error: Failed to open directory." << endl;
+        cerr << "[!] fs_walk_path: Error: Failed to read directory " << inode_fpn << "." << endl;
         exit(1);
     }
 

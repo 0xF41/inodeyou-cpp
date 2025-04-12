@@ -39,7 +39,7 @@ bool is_valid_path(const std::string &path)
     // Use stat to get information about the path
     if (stat(path.c_str(), &buffer) != 0)
     {
-        cerr << "Error: Failed to stat path '" << path << "'." << endl;
+        cerr << "[!] Error: Failed to stat path '" << path << "'." << endl;
         return false;
     }
 
@@ -49,7 +49,7 @@ bool is_valid_path(const std::string &path)
         return true;
     }
 
-    cerr << "Error: Path '" << path << "' is not a valid directory, file, symbolic link, or block device." << endl;
+    cerr << "[!] Error: Path '" << path << "' is not a valid directory, file, symbolic link, or block device." << endl;
     return false;
 }
 
@@ -64,13 +64,13 @@ bool checkArgv(std::string &param, const char *arg, const std::string &err_msg)
 {
     if (arg == nullptr)
     {
-        cerr << "Error: " << err_msg << " argument is null." << endl;
+        cerr << "[!] Error: " << err_msg << " argument is null." << endl;
         return false;
     }
 
     if (!is_valid_path(arg))
     {
-        cerr << "Error: " << err_msg << " path '" << arg << "' is invalid (does not exist or is not a file/directory)." << endl;
+        cerr << "[!] Error: " << err_msg << " path '" << arg << "' is invalid (does not exist or is not a file/directory)." << endl;
         return false;
     }
 

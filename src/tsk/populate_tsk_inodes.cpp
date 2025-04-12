@@ -18,14 +18,14 @@ void populate_tsk_inodes(const char *vol, const char *dir, unordered_set<int> &t
     TSK_IMG_INFO *img = tsk_img_open_utf8_sing(vol, TSK_IMG_TYPE_DETECT, 0);
     if (img == nullptr)
     {
-        cerr << "Error: " << vol << " is an invalid volume" << endl;
+        cerr << "[!] Error: " << vol << " is an invalid volume" << endl;
         exit(-1);
     }
 
     TSK_FS_INFO *fs = tsk_fs_open_img(img, 0, TSK_FS_TYPE_DETECT);
     if (fs == nullptr)
     {
-        cerr << "Error: Failed to open filesystem. Only types NTFS, FAT, exFAT, HFS+, Ext3, Ext4, UFS and YAFFS2 are supported." << endl;
+        cerr << "[!] Error: Failed to open filesystem. Only types NTFS, FAT, exFAT, HFS+, Ext3, Ext4, UFS and YAFFS2 are supported." << endl;
         tsk_img_close(img);
         exit(-1);
     }

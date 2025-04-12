@@ -18,13 +18,13 @@ int main(int argc, char *argv[])
 {
     if (argc < 1 || argc > 3)
     {
-        cerr << "Usage: " << argv[0] << " <volume> [starting_dir]" << endl;
+        cerr << "[*] Usage: " << argv[0] << " <volume> [starting_dir]" << endl;
         return 1;
     }
 
     if (geteuid() != 0)
     {
-        cerr << "Error: This program must be run as root." << endl;
+        cerr << "[!] Error: This program must be run as root." << endl;
         return 1;
     }
 
@@ -43,10 +43,10 @@ int main(int argc, char *argv[])
     unordered_set<int> fs_inode_set;  // Set to store filesystem inodes
 
     populate_tsk_inodes(volume.c_str(), start_dir.c_str(), tsk_inode_set); // Populate TSK inodes
-    cout << "TSK inodes populated with " << tsk_inode_set.size() << " inodes." << endl;
+    cout << "[*] TSK inodes populated with " << tsk_inode_set.size() << " inodes." << endl;
 
     populate_fs_inodes(start_dir.c_str(), fs_inode_set);   // Populate filesystem inodes
-    cout << "Filesystem inodes populated with " << fs_inode_set.size() << " inodes." << endl;
+    cout << "[*] Filesystem inodes populated with " << fs_inode_set.size() << " inodes." << endl;
 
     unordered_set<int> diff_inodes = find_differences(tsk_inode_set, fs_inode_set);
     print_result(diff_inodes);

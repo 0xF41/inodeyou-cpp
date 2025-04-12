@@ -36,11 +36,11 @@ void print_result(const std::unordered_set<int> &diff_inodes)
 {
     if (diff_inodes.empty())
     {
-        cout << "[OK] No differences found between TSK and filesystem inodes." << endl;
+        cout << "[*] No differences found between TSK and filesystem inodes." << endl;
     }
     else
     {
-        cout << "[WARNING] The following files may be hidden by malware:" << endl;
+        cout << "[!!] The following files may be hidden by malware:" << endl;
         for (const auto &inode : diff_inodes)
         {
             cout << inode << endl;
