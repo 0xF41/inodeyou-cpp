@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
 
     if (argc > 1 && !checkArgv(volume, argv[1], "volume"))
         return 1;
-    if (argc > 2 && !checkArgv(start_dir, argv[3], "starting directory"))
+    if (argc > 2 && !checkArgv(start_dir, argv[2], "starting directory"))
         return 1;
 
     sync_filesystem(); // Sync the filesystem to ensure all changes are written
