@@ -11,7 +11,7 @@ With the results from both methods, we can cross-check to see if there are any i
 
 **Adapted from inodeyou:**
 
-- **`inodeyou` documentation:** http://www.unixist.com/security/detecting-hidden-files/index.html
+- **`inodeyou` documentation:** hxxp[://]www[.]unixist[.]com/security/detecting-hidden-files/index[.]html (defanged as link is broken)
 - **`inodeyou` original repository:** https://bitbucket.org/unixist/inodeyou/src/master/inodeyou.py
 
 ## Build & Installation
