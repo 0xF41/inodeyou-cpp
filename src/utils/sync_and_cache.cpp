@@ -10,10 +10,7 @@ using namespace std;
  * Syncs the filesystem to ensure all data is written to disk.
  */
 void sync_filesystem() {
-    int sync_status = system("/bin/sync");
-    if (sync_status != 0) {
-        cerr << "Error: Failed to execute sync." << endl;
-    }
+    sync();
 }
 
 /**
