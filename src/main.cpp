@@ -16,9 +16,9 @@ using namespace std;
  */
 int main(int argc, char *argv[])
 {
-    if (argc < 2)
+    if (argc < 1)
     {
-        cerr << "Usage: " << argv[0] << " <volume> [mount_point] [starting_dir]" << endl;
+        cerr << "Usage: " << argv[0] << " <volume> [starting_dir]" << endl;
         return 1;
     }
 
@@ -28,15 +28,12 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    string volume;
-    string mount_point;
+    string volume; // Volume name
     string start_dir = "/"; // Default to root directory
 
     if (argc > 1 && !checkArgv(volume, argv[1], "volume"))
         return 1;
-    if (argc > 2 && !checkArgv(mount_point, argv[2], "mount point"))
-        return 1;
-    if (argc > 3 && !checkArgv(start_dir, argv[3], "starting directory"))
+    if (argc > 2 && !checkArgv(start_dir, argv[3], "starting directory"))
         return 1;
 
     sync_filesystem(); // Sync the filesystem to ensure all changes are written
