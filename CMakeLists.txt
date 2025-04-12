@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 # Set the project name
-project(InodeYou)
+project(inodeyou-cpp)
 
 # Set the C++ standard
 set(CMAKE_CXX_STANDARD 11)
@@ -17,7 +17,6 @@ set(SOURCES
     src/fs/populate_fs_inodes.cpp
     src/tsk/tsk_walk_path.cpp
     src/tsk/populate_tsk_inodes.cpp
-    src/utils/sync_and_cache.cpp
     src/utils/common.cpp
     src/utils/inode_utils.cpp
 )
