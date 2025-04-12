@@ -23,7 +23,6 @@ void fs_walk_path(const char *inode_fpn, unordered_set<int> &fs_inode_set)
     }
 
     struct dirent *entry = nullptr;
-    int inode_num = 0;
 
     while ((entry = readdir(folder)) != nullptr)
     {
@@ -34,14 +33,17 @@ void fs_walk_path(const char *inode_fpn, unordered_set<int> &fs_inode_set)
             {
                 continue;
             }
+
+            fs_inode_set.insert(entry->d_ino);
+
+            // Recursively walk the subdirectory
             string path = string(inode_fpn) + "/" + entry->d_name;
-            fs_walk_path(path.c_str(), fs_inode_set); // Recursively walk the subdirectory
+            fs_walk_path(path.c_str(), fs_inode_set);
         }
         // Regular file
         else if (entry->d_type == DT_REG)
         {
-            inode_num = entry->d_ino;
-            fs_inode_set.insert(inode_num);
+            fs_inode_set.insert(entry->d_ino);
         }
     }
     closedir(folder);
