@@ -19,7 +19,7 @@ void fs_walk_path(const char *mount_point, const char *root, unordered_set<int> 
     DIR *folder = opendir(mount_point);
     if (folder == nullptr)
     {
-        cerr << "Error: Failed to open directory." << endl;
+        cerr << "fs_walk_path: Error: Failed to open directory." << endl;
         return;
     }
 
