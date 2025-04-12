@@ -14,13 +14,16 @@ using namespace std;
  * @param argv Argument vector
  * @return Exit status
  */
-int main(int argc, char *argv[]) {
-    if (argc < 2) {
+int main(int argc, char *argv[])
+{
+    if (argc < 2)
+    {
         cerr << "Usage: " << argv[0] << " <volume> [mount_point] [starting_dir]" << endl;
         return 1;
     }
 
-    if (geteuid() != 0) {
+    if (geteuid() != 0)
+    {
         cerr << "Error: This program must be run as root." << endl;
         return 1;
     }
@@ -29,9 +32,12 @@ int main(int argc, char *argv[]) {
     string mount_point;
     string root = "/"; // Default to root directory
 
-    if (argc > 1 && !checkArgv(volume, argv[1], "volume")) return 1;
-    if (argc > 2 && !checkArgv(mount_point, argv[2], "mount point")) return 1;
-    if (argc > 3 && !checkArgv(root, argv[3], "starting directory")) return 1;
+    if (argc > 1 && !checkArgv(volume, argv[1], "volume"))
+        return 1;
+    if (argc > 2 && !checkArgv(mount_point, argv[2], "mount point"))
+        return 1;
+    if (argc > 3 && !checkArgv(root, argv[3], "starting directory"))
+        return 1;
 
     sync_filesystem(); // Sync the filesystem to ensure all changes are written
     drop_caches();     // Drop caches to free up memory
