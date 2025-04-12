@@ -22,10 +22,8 @@ void tsk_walk_path(TSK_FS_INFO *fs, TSK_INUM_T dir_inode_num, std::unordered_set
     }
 
     TSK_FS_FILE *fs_file = nullptr;
-    TSK_INUM_T inode_num;
     for (size_t i = 0, n = tsk_fs_dir_getsize(fs_dir); i < n; i++)
     {
-        inode_num = -1;
         fs_file = tsk_fs_dir_get(fs_dir, i);
         if (fs_file == nullptr)
         {
@@ -47,6 +45,13 @@ void tsk_walk_path(TSK_FS_INFO *fs, TSK_INUM_T dir_inode_num, std::unordered_set
             continue;
         }
 
+        // Regular files
+        if (fs_file->meta->type == TSK_FS_META_TYPE_REG)
+        {
+            tsk_inode_set.insert(fs_file->meta->addr);
+        }
+
+        // Directories
         if (fs_file->meta->type == TSK_FS_META_TYPE_DIR && strcmp(fs_file->name->name, "$OrphanFiles") != 0)
         {
             tsk_inode_set.insert(fs_file->meta->addr);
