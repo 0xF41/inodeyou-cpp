@@ -36,20 +36,20 @@ bool is_valid_path(const std::string &path)
 {
     struct stat buffer;
 
-    // Use lstat to handle symbolic links
-    if (lstat(path.c_str(), &buffer) != 0)
+    // Use stat to get information about the path
+    if (stat(path.c_str(), &buffer) != 0)
     {
         cerr << "Error: Failed to stat path '" << path << "'." << endl;
         return false;
     }
 
-    // Check for valid file types (directory, regular file, or symbolic link)
-    if (S_ISDIR(buffer.st_mode) || S_ISREG(buffer.st_mode) || S_ISLNK(buffer.st_mode))
+    // Check for valid file types (directory, regular file, symbolic link, or block device)
+    if (S_ISDIR(buffer.st_mode) || S_ISREG(buffer.st_mode) || S_ISLNK(buffer.st_mode) || S_ISBLK(buffer.st_mode))
     {
         return true;
     }
 
-    cerr << "Error: Path '" << path << "' is not a valid directory, file, or symbolic link." << endl;
+    cerr << "Error: Path '" << path << "' is not a valid directory, file, symbolic link, or block device." << endl;
     return false;
 }
 
