@@ -14,14 +14,14 @@ using namespace std;
  * @param inode_fpn Path to the directory to start walking from
  * @param fs_inode_set Set to populate with inode numbers of all directories encountered
  */
-void populate_fs_inodes(const char *mount_point, unordered_set<int> &fs_inode_set)
+void populate_fs_inodes(const char *path, unordered_set<int> &fs_inode_set)
 {
     struct statfs stat;
-    if (statfs(mount_point, &stat) == -1)
+    if (statfs(path, &stat) == -1)
     {
         cerr << "Error: Failed to get filesystem statistics." << endl;
         return;
     }
 
-    fs_walk_path(mount_point, fs_inode_set); // Recursively walk the directory structure
+    fs_walk_path(path, fs_inode_set); // Recursively walk the directory structure
 }

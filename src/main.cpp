@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
     unordered_set<int> fs_inode_set;  // Set to store filesystem inodes
 
     populate_tsk_inodes(volume.c_str(), start_dir.c_str(), tsk_inode_set); // Populate TSK inodes
-    populate_fs_inodes(volume.c_str(), start_dir.c_str(), fs_inode_set);   // Populate filesystem inodes
+    populate_fs_inodes(start_dir.c_str(), fs_inode_set);   // Populate filesystem inodes
 
     unordered_set<int> diff_inodes = find_differences(tsk_inode_set, fs_inode_set);
     print_result(diff_inodes);
