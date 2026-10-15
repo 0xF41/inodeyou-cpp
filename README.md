@@ -36,7 +36,7 @@ cmake -S . -B build
 cmake --build build
 ```
 
-The executable is **`build/inodeyou`**. If an older `inodeyou` executable exists in the repository root, these commands do not replace it.
+The executable is in **`build/inodeyou`**. 
 
 ## Usage
 
@@ -130,22 +130,6 @@ Counts refer to unique inodes, not filenames. A single inode can have several re
 
 ## Exit codes
 
-### Terminal colours
-
-Output automatically uses colour in terminals: **red** for raw-only candidates,
-**amber** for mounted-only discrepancies and incomplete scans, **green** for
-matching inventories, and **cyan** for inventory labels and inode numbers.
-Explanatory notes are dimmed. Labels remain readable without colour.
-
-```sh
-sudo ./build/inodeyou /dev/sda2 /var/lib/demo --color always
-sudo ./build/inodeyou /dev/sda2 /var/lib/demo --color never
-```
-
-The default is `--color auto`, which disables colour on redirected streams,
-when `NO_COLOR` is set, or when `TERM=dumb`. Explicit `always` and `never`
-override automatic detection. Colour does not change comparisons or exit codes.
-
 ### Status codes
 
 | Code | Meaning |
@@ -167,27 +151,6 @@ When collection fails, the program reports `INCOMPLETE` and suppresses the compa
 - **Traversal bounds:** directory traversal is depth-limited. TSK directory cycles are rejected. An inaccessible directory or missing metadata makes the scan incomplete.
 - **Inventory scope:** the starting directory itself is excluded from both inventories. TSK unallocated entries and virtual entries are excluded; this is not a deleted-file recovery tool.
 - **Shared trust boundary:** raw-device reads and mounted enumeration both rely on the same running kernel. A compromised kernel may manipulate either view.
-
-## Tests
-
-After building:
-
-```sh
-ctest --test-dir build --output-on-failure
-```
-
-The tests create an unmounted temporary ext4 image using `e2fsprogs`. They require neither root privileges nor a rootkit.
-
-Coverage includes:
-
-- Inode values larger than 32 bits.
-- Directional inode and hard-link name differences.
-- Escaping of control bytes in paths.
-- Mount-root path translation and subtree boundaries.
-- Mounted directory traversal and TSK traversal of an ext4 image.
-- Missing raw paths and mismatched starting-directory inode identities.
-
-The updated code has built and passed these tests on Ubuntu with GCC 13.3.0. The path-aware version's live block-device/rootkit demonstration remains a separate validation step.
 
 ## Credits
 
