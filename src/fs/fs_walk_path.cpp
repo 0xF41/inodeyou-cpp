@@ -1,50 +1,32 @@
-#include <iostream>
-#include <cstring>
+#include "fs_walk_path.h"
 #include <dirent.h>
-#include <unordered_set>
-#include <string>
+#include <sys/stat.h>
+#include <cerrno>
+#include <cstring>
+#include <memory>
+#include <stdexcept>
 
-using namespace std;
-
-/**
- * Recursively walks through the directory structure starting from the given inode number
- * and populates the provided set with inode numbers of all directories encountered.
- *
- * @param inode_fpn Path to the directory to start walking from
- * @param fs_inode_set Set to populate with inode numbers of all directories encountered
- */
-void fs_walk_path(const char *inode_fpn, unordered_set<int> &fs_inode_set)
+void fs_walk_path(const std::string &path, dev_t device, InodePaths &paths, unsigned depth)
 {
-    DIR *folder = opendir(inode_fpn);
-    if (folder == nullptr)
-    {
-        cerr << "[!] fs_walk_path: Error: Failed to read directory " << inode_fpn << ". Skipping." << endl;
-        return;
-    }
-
-    struct dirent *entry = nullptr;
-
-    while ((entry = readdir(folder)) != nullptr)
-    {
-        // Directory entry type
-        if (entry->d_type == DT_DIR)
-        {
-            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-            {
-                continue;
-            }
-
-            fs_inode_set.insert(entry->d_ino);
-
-            // Recursively walk the subdirectory
-            string path = string(inode_fpn) + "/" + entry->d_name;
-            fs_walk_path(path.c_str(), fs_inode_set);
+    if (depth > 256) throw std::runtime_error("Mounted directory depth limit exceeded");
+    auto close_dir = [](DIR *value) { closedir(value); };
+    std::unique_ptr<DIR, decltype(close_dir)> dir(opendir(path.c_str()), close_dir);
+    if (!dir) throw std::runtime_error("Cannot open mounted directory: " + path);
+    while (true) {
+        errno = 0;
+        dirent *entry = readdir(dir.get());
+        if (!entry) {
+            if (errno) throw std::runtime_error("Mounted enumeration failed: " + path);
+            break;
         }
-        // Regular file
-        else if (entry->d_type == DT_REG)
-        {
-            fs_inode_set.insert(entry->d_ino);
-        }
+        if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")) continue;
+        const auto full = join_path(path, entry->d_name);
+        struct stat st;
+        // lstat handles DT_UNKNOWN and does not follow symlinks out of scope.
+        if (lstat(full.c_str(), &st)) throw std::runtime_error("Cannot stat mounted entry: " + full);
+        if (st.st_dev != device)
+            throw std::runtime_error("Nested filesystem encountered; choose a narrower scan directory: " + full);
+        paths[static_cast<Inode>(st.st_ino)].insert(full);
+        if (S_ISDIR(st.st_mode)) fs_walk_path(full, device, paths, depth + 1);
     }
-    closedir(folder);
 }

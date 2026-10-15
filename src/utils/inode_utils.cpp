@@ -1,49 +1,66 @@
 #include "inode_utils.h"
-#include <iostream>
-using namespace std;
+#include "output.h"
+#include <iomanip>
+#include <stdexcept>
 
-/**
- * Find the differences between TSK and filesystem inodes.
- * @param tsk_inodes Set of inodes from TSK
- * @param fs_inodes Set of inodes from the filesystem
- * @return Set of inodes that are different between TSK and filesystem
- */
-std::unordered_set<int> find_differences(const std::unordered_set<int> &tsk_inodes, const std::unordered_set<int> &fs_inodes)
+std::string join_path(const std::string &parent, const std::string &name)
 {
-    std::unordered_set<int> diff_inodes; // Set to store differences between TSK and filesystem inodes
-    for (const auto &inode : tsk_inodes)
-    {
-        if (fs_inodes.find(inode) == fs_inodes.end())
-        {
-            diff_inodes.insert(inode);
-        }
-    }
-    for (const auto &inode : fs_inodes)
-    {
-        if (tsk_inodes.find(inode) == tsk_inodes.end())
-        {
-            diff_inodes.insert(inode);
-        }
-    }
-    return diff_inodes;
+    return (parent == "/" ? "/" : parent + "/") + name;
 }
 
-/**
- * Print the result of inode differences.
- * @param diff_inodes Set of inodes that are different between TSK and filesystem
- */
-void print_result(const std::unordered_set<int> &diff_inodes)
+std::string volume_path(const std::string &mounted, const std::string &root)
 {
-    if (diff_inodes.empty())
-    {
-        cout << "[*] No differences found between TSK and filesystem inodes." << endl;
+    if (root == "/") return mounted;
+    if (mounted == root) return "/";
+    if (mounted.compare(0, root.size() + 1, root + "/") != 0)
+        throw std::runtime_error("Starting directory is outside --mount-root");
+    return mounted.substr(root.size());
+}
+
+static void print_paths(std::ostream &out, const char *label, Inode inode,
+                        const std::set<std::string> &paths, bool color, const char *tone)
+{
+    out << paint(std::string("[!] ") + label, tone, color)
+        << " | " << paint("inode=" + std::to_string(inode), "1;36", color) << '\n';
+    for (const auto &path : paths) {
+        // Escape control bytes so filenames cannot inject terminal commands/lines.
+        out << "    " << paint("Path:", "36", color) << " \"";
+        for (unsigned char c : path) {
+            if (c == '\\' || c == '"') out << '\\' << c;
+            else if (c < 32 || c >= 127)
+                out << "\\x" << std::hex << std::setw(2) << std::setfill('0')
+                    << static_cast<unsigned>(c) << std::dec;
+            else out << c;
+        }
+        out << "\"\n";
     }
-    else
-    {
-        cout << "[!!] The following files may be hidden by malware:" << endl;
-        for (const auto &inode : diff_inodes)
-        {
-            cout << inode << endl;
+}
+
+bool print_differences(const InodePaths &raw, const InodePaths &mounted, std::ostream &out, bool color)
+{
+    bool different = false;
+    for (const auto &item : raw) {
+        auto found = mounted.find(item.first);
+        if (found == mounted.end()) {
+            different = true;
+            print_paths(out, "RAW-ONLY: hidden-entry candidate", item.first, item.second, color, "1;31");
+        } else {
+            std::set<std::string> raw_only, mounted_only;
+            for (const auto &p : item.second)
+                if (!found->second.count(p)) raw_only.insert(p);
+            for (const auto &p : found->second)
+                if (!item.second.count(p)) mounted_only.insert(p);
+            if (!raw_only.empty() || !mounted_only.empty()) different = true;
+            if (!raw_only.empty()) print_paths(out, "NAME-ONLY IN RAW VIEW", item.first, raw_only, color, "1;31");
+            if (!mounted_only.empty()) print_paths(out, "NAME-ONLY IN MOUNTED VIEW", item.first, mounted_only, color, "1;33");
         }
     }
+    for (const auto &item : mounted) {
+        if (!raw.count(item.first)) {
+            different = true;
+            print_paths(out, "MOUNTED-ONLY: reverse discrepancy", item.first, item.second, color, "1;33");
+        }
+    }
+    if (!different) out << paint("[*] No differences found between TSK and filesystem inode/path inventories.", "1;32", color) << '\n';
+    return different;
 }

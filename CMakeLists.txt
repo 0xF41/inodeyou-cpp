@@ -32,3 +32,10 @@ add_executable(inodeyou ${SOURCES})
 
 # Link the Sleuth Kit library
 target_link_libraries(inodeyou ${TSK_LIB})
+
+enable_testing()
+add_executable(inventory_tests tests/inventory_tests.cpp
+    src/utils/inode_utils.cpp src/fs/fs_walk_path.cpp src/fs/populate_fs_inodes.cpp
+    src/tsk/tsk_walk_path.cpp src/tsk/populate_tsk_inodes.cpp)
+target_link_libraries(inventory_tests ${TSK_LIB})
+add_test(NAME inventories COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration.sh $<TARGET_FILE:inventory_tests>)

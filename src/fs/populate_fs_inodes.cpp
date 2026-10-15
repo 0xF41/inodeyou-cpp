@@ -1,27 +1,11 @@
-#include <iostream>
-#include <cstring>
-#include <unordered_set>
-#include <sys/statfs.h>
-#include "fs_walk_path.h"
 #include "populate_fs_inodes.h"
-
-using namespace std;
-
-/**
- * Recursively walks through the directory structure starting from the given inode number
- * and populates the provided set with inode numbers of all directories encountered.
- *
- * @param inode_fpn Path to the directory to start walking from
- * @param fs_inode_set Set to populate with inode numbers of all directories encountered
- */
-void populate_fs_inodes(const char *path, unordered_set<int> &fs_inode_set)
+#include "fs_walk_path.h"
+#include <sys/stat.h>
+#include <stdexcept>
+void populate_fs_inodes(const char *path, InodePaths &paths)
 {
-    struct statfs stat;
-    if (statfs(path, &stat) == -1)
-    {
-        cerr << "[!] Error: Failed to get filesystem statistics. Ensure that " << path << " exists." << endl;
-        exit(1);
-    }
-
-    fs_walk_path(path, fs_inode_set); // Recursively walk the directory structure
+    struct stat st;
+    if (stat(path, &st) || !S_ISDIR(st.st_mode))
+        throw std::runtime_error("Starting path is not an accessible directory");
+    fs_walk_path(path, st.st_dev, paths);
 }

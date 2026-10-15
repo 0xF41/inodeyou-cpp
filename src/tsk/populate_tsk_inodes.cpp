@@ -1,39 +1,25 @@
-#include <iostream>
-#include <unordered_set>
-#include <tsk/libtsk.h>
-#include "tsk_walk_path.h"
 #include "populate_tsk_inodes.h"
+#include "tsk_walk_path.h"
+#include <memory>
+#include <stdexcept>
+#include <vector>
 
-using namespace std;
-
-/**
- * Recursively walks through the directory structure starting from the given inode number
- *
- * @param fs Filesystem information
- * @param dir_inode_num Directory inode number to start walking from
- * @param tsk_inode_set Set to populate with inode numbers of all directories encountered
- */
-void populate_tsk_inodes(const char *vol, const char *dir, unordered_set<int> &tsk_inode_set)
+void populate_tsk_inodes(const char *volume, const std::string &inside,
+                         const std::string &mounted, Inode expected_inode, InodePaths &paths)
 {
-    TSK_IMG_INFO *img = tsk_img_open_utf8_sing(vol, TSK_IMG_TYPE_DETECT, 0);
-    if (img == nullptr)
-    {
-        cerr << "[!] Error: " << vol << " is an invalid volume" << endl;
-        exit(-1);
-    }
-
-    TSK_FS_INFO *fs = tsk_fs_open_img(img, 0, TSK_FS_TYPE_DETECT);
-    if (fs == nullptr)
-    {
-        cerr << "[!] Error: Failed to open filesystem. Only types NTFS, FAT, exFAT, HFS+, Ext3, Ext4, UFS and YAFFS2 are supported." << endl;
-        tsk_img_close(img);
-        exit(-1);
-    }
-
-    TSK_INUM_T dir_inum;
-    tsk_fs_ifind_path(fs, const_cast<TSK_TCHAR *>(dir), &dir_inum); // Find the inode number of the root directory
-    tsk_walk_path(fs, dir_inum, tsk_inode_set); // Start walking from the root inode
-
-    tsk_fs_close(fs);
-    tsk_img_close(img);
+    std::unique_ptr<TSK_IMG_INFO, decltype(&tsk_img_close)> img(
+        tsk_img_open_utf8_sing(volume, TSK_IMG_TYPE_DETECT, 0), tsk_img_close);
+    if (!img) throw std::runtime_error("TSK could not open volume");
+    std::unique_ptr<TSK_FS_INFO, decltype(&tsk_fs_close)> fs(
+        tsk_fs_open_img(img.get(), 0, TSK_FS_TYPE_DETECT), tsk_fs_close);
+    if (!fs) throw std::runtime_error("TSK could not open filesystem at volume offset zero");
+    TSK_INUM_T inode = 0;
+    std::vector<char> lookup(inside.begin(), inside.end());
+    lookup.push_back('\0');
+    if (tsk_fs_ifind_path(fs.get(), lookup.data(), &inode) != 0)
+        throw std::runtime_error("TSK could not resolve starting directory inside volume: " + inside);
+    if (static_cast<Inode>(inode) != expected_inode)
+        throw std::runtime_error("Raw/mounted starting inode mismatch; check volume and --mount-root");
+    std::set<Inode> ancestors;
+    tsk_walk_path(fs.get(), inode, mounted, paths, ancestors);
 }

@@ -1,60 +1,199 @@
-# inodeyou
+# inodeyou-cpp
 
-**inodeyou-cpp** is a forensic tool to detect files and directories that may be hidden by malware on unix systems.
+**Compare raw-volume and mounted-filesystem inode inventories, with full paths for discrepancies.**
 
-**inodeyou-cpp** uses The Sleuth Kit (TSK) C library to compare the view of the filesystem inodes by two methods:
+`inodeyou-cpp` is a Linux forensic proof of concept for identifying files and directories that may be omitted from filesystem enumeration. It compares two views of the same directory tree:
 
-1. Finding inodes visible to the disk's view of the file system (with `read()`) via TSK library
-2. Finding inodes visible from the user's view of the mounted file system (with `getdent()`, `stat()`, etc.).
+1. **Raw-volume view:** The Sleuth Kit (TSK) parses filesystem metadata from the backing block device.
+2. **Mounted view:** The program walks the directory through normal filesystem interfaces.
 
-With the results from both methods, we can cross-check to see if there are any inodes that are seen by the disk view of the file system (with TSK) and not from the user's view of the mounted file system (with the ls command). If so, those inodes might be hidden by a rootkit/malware.
+Differences are investigation candidates, not proof of malware. Both views still depend on the running kernel, and live filesystem changes can produce discrepancies.
 
-**Adapted from inodeyou:**
+## Features
 
-- **`inodeyou` documentation:** hxxp[://]www[.]unixist[.]com/security/detecting-hidden-files/index[.]html (defanged as link is broken)
-- **`inodeyou` original repository:** https://bitbucket.org/unixist/inodeyou/src/master/inodeyou.py
+- Reports full mounted paths alongside unsigned 64-bit inode numbers.
+- Retains multiple names per inode, including hard links.
+- Distinguishes raw-only inodes, mounted-only inodes, and differing names for shared inodes.
+- Collects raw-view paths directly through TSK; no subsequent `find` lookup is needed.
+- Supports an explicit mount root for filesystems mounted somewhere other than `/`.
+- Inventories symbolic links without following them during traversal.
+- Escapes non-ASCII and control bytes in reported paths for terminal-safe output.
+- Returns distinct exit codes for matching inventories, differences, and incomplete scans.
+- Flushes pending writes before collection without dropping system-wide filesystem caches.
 
-## Build & Installation
-For Debian-based distributions that use the following file systems (NTFS, FAT, exFAT, HFS+, Ext3, Ext4, UFS and YAFFS2) are supported.
+## Build
 
-**Prerequisites & Dependencies**
+On Ubuntu or Debian:
 
-```
+```sh
 sudo apt update
-sudo apt install g++ libtsk-dev cmake
+sudo apt install build-essential cmake libtsk-dev e2fsprogs
+
+git clone https://github.com/0xF41/inodeyou-cpp.git
+cd inodeyou-cpp
+
+cmake -S . -B build
+cmake --build build
 ```
 
-**Installation**
-```
-git clone https://github.com/0xf41/inodeyou-cpp.git
-cd inodeyou-cpp
-./build.sh
-```
+The executable is **`build/inodeyou`**. If an older `inodeyou` executable exists in the repository root, these commands do not replace it.
 
 ## Usage
 
-The program scans for hidden inodes recursively from `[directory]` in the filesystem mounted on `<volume>`.
-
-```
-sudo ./inodeyou <volume> [directory]
+```text
+sudo ./build/inodeyou <volume> [directory] [--mount-root <mountpoint>]
 ```
 
-**Example**
+| Argument | Meaning |
+| --- | --- |
+| `volume` | The block device containing the mounted filesystem, such as a partition or logical volume. |
+| `directory` | The directory tree to compare. Defaults to the mount root when omitted. |
+| `--mount-root` | Where the volume's filesystem root is mounted. Defaults to `/`. |
 
-```
-sudo ./inodeyou /dev/sda1 /home/user1
-```
+Display usage without root privileges:
 
-**Expected output (for no anomalies):**
-
-```
-[*] TSK inodes populated with 77894 inodes.
-[*] Filesystem inodes populated with 77894 inodes.
-[*] No differences found between TSK and filesystem inodes.
+```sh
+./build/inodeyou --help
 ```
 
-## Disclaimer
+### Filesystem mounted at `/`
 
-This program is intended to be a proof-of-concept and to be used for educational and research purposes only. It may produce many false positives and should not be used as a definitive tool for detecting malware.
+First identify the device backing the directory:
 
----
+```sh
+findmnt -T /var/lib/demo -o SOURCE,TARGET,FSTYPE
+```
+
+If the output identifies `/dev/sda2`, mounted at `/`:
+
+```sh
+sudo ./build/inodeyou /dev/sda2 /var/lib/demo
+echo $?
+```
+
+Use an existing, small directory with minimal activity for the initial comparison.
+
+### Filesystem mounted elsewhere
+
+For `/dev/sdb1` mounted at `/mnt/data`:
+
+```sh
+sudo ./build/inodeyou /dev/sdb1 /mnt/data/demo --mount-root /mnt/data
+```
+
+The program walks `/mnt/data/demo` through the mounted view and resolves `/demo` inside the raw volume. Both inventories report paths under `/mnt/data/demo`.
+
+The mount root must represent the filesystem root, not a bind-mounted subdirectory. The program checks the backing device identity and requires the starting inode resolved by TSK to match the mounted starting directory.
+
+## Reading the results
+
+The following examples are illustrative; inode numbers and inventory sizes vary.
+
+### Matching inventories
+
+```text
+[*] TSK inventory: 2 inodes.
+[*] Mounted inventory: 2 inodes.
+[*] No differences found between TSK and filesystem inode/path inventories.
+```
+
+This means the collected inode/path inventories match. It does not establish whole-system integrity.
+
+### Raw-only inode
+
+```text
+[!] RAW-ONLY: hidden-entry candidate | inode=12345
+    Path: "/var/lib/demo/probe_caraxes.txt"
+```
+
+TSK observed the inode, but the mounted walk did not. The path comes from raw-volume directory records, so it can be reported even when normal enumeration omits the entry.
+
+### Mounted-only inode
+
+```text
+[!] MOUNTED-ONLY: reverse discrepancy | inode=12346
+    Path: "/var/lib/demo/new-file.txt"
+```
+
+The mounted walk observed an inode absent from the TSK inventory. Investigate this separately from raw-only candidates; it is not automatically evidence of a hidden file.
+
+### Different names for a shared inode
+
+```text
+[!] NAME-ONLY IN RAW VIEW | inode=12347
+    Path: "/var/lib/demo/second-link.txt"
+```
+
+The inode exists in both inventories, but this path appears only in the raw view. The reverse is reported as `NAME-ONLY IN MOUNTED VIEW`. This preserves differences that an inode-only comparison would miss, such as an omitted hard-link name. Renames between the two walks can also produce name discrepancies.
+
+Counts refer to unique inodes, not filenames. A single inode can have several reported paths.
+
+## Exit codes
+
+### Terminal colours
+
+Output automatically uses colour in terminals: **red** for raw-only candidates,
+**amber** for mounted-only discrepancies and incomplete scans, **green** for
+matching inventories, and **cyan** for inventory labels and inode numbers.
+Explanatory notes are dimmed. Labels remain readable without colour.
+
+```sh
+sudo ./build/inodeyou /dev/sda2 /var/lib/demo --color always
+sudo ./build/inodeyou /dev/sda2 /var/lib/demo --color never
+```
+
+The default is `--color auto`, which disables colour on redirected streams,
+when `NO_COLOR` is set, or when `TERM=dumb`. Explicit `always` and `never`
+override automatic detection. Colour does not change comparisons or exit codes.
+
+### Status codes
+
+| Code | Meaning |
+| --- | --- |
+| `0` | Collection completed and the inode/path inventories matched. |
+| `1` | Collection completed and differences were found. |
+| `2` | Invalid input, collection failure, or incomplete scan. |
+
+**Behaviour change:** earlier versions returned `0` even when inode differences were printed. Scripts should use the new exit-code meanings.
+
+When collection fails, the program reports `INCOMPLETE` and suppresses the comparison instead of treating a partial inventory as a list of hidden entries.
+
+## Scope and limitations
+
+- **Linux block-device workflow:** the CLI requires the block device backing the mounted scan directory. Whole-disk images with partition offsets and standalone image files are not supported CLI inputs.
+- **Filesystem support:** parsing depends on the installed TSK version. The automated integration test exercises ext4; other filesystem formats have not been established as working by that test.
+- **Live observations:** the two walks are sequential, not an atomic snapshot. Writes, renames, deletions, and inode reuse can affect results. Flushing pending writes does not eliminate those races.
+- **Nested mounts:** crossing onto another device produces an incomplete result. Avoid nested mounts, including same-device bind mounts, in the selected tree; device checks do not identify every bind-mount boundary.
+- **Traversal bounds:** directory traversal is depth-limited. TSK directory cycles are rejected. An inaccessible directory or missing metadata makes the scan incomplete.
+- **Inventory scope:** the starting directory itself is excluded from both inventories. TSK unallocated entries and virtual entries are excluded; this is not a deleted-file recovery tool.
+- **Shared trust boundary:** raw-device reads and mounted enumeration both rely on the same running kernel. A compromised kernel may manipulate either view.
+
+## Tests
+
+After building:
+
+```sh
+ctest --test-dir build --output-on-failure
+```
+
+The tests create an unmounted temporary ext4 image using `e2fsprogs`. They require neither root privileges nor a rootkit.
+
+Coverage includes:
+
+- Inode values larger than 32 bits.
+- Directional inode and hard-link name differences.
+- Escaping of control bytes in paths.
+- Mount-root path translation and subtree boundaries.
+- Mounted directory traversal and TSK traversal of an ext4 image.
+- Missing raw paths and mismatched starting-directory inode identities.
+
+The updated code has built and passed these tests on Ubuntu with GCC 13.3.0. The path-aware version's live block-device/rootkit demonstration remains a separate validation step.
+
+## Credits
+
+Adapted from the original **inodeyou** project:
+
+- [Original repository and Python implementation](https://bitbucket.org/unixist/inodeyou/src/master/inodeyou.py)
+- Historical documentation: `hxxp[://]www[.]unixist[.]com/security/detecting-hidden-files/index[.]html` (previously unavailable).
+
+Raw filesystem parsing is provided by [The Sleuth Kit](https://www.sleuthkit.org/).
