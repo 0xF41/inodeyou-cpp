@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 #ifndef POPULATE_FS_INODES_H
 #define POPULATE_FS_INODES_H
 #include "../utils/inode_utils.h"

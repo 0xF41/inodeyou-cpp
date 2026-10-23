@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 #ifndef INODE_UTILS_H
 #define INODE_UTILS_H
 #include <cstdint>

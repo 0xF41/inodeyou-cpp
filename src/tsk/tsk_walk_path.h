@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 #ifndef TSK_WALK_PATH_H
 #define TSK_WALK_PATH_H
 #include <tsk/libtsk.h>

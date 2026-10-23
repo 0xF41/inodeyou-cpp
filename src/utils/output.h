@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 #ifndef INODEYOU_OUTPUT_H
 #define INODEYOU_OUTPUT_H
 #include <cstdlib>

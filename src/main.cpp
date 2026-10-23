@@ -1,8 +1,16 @@
+// SPDX-License-Identifier: GPL-3.0-only
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 #include <iostream>
 #include <stdexcept>
 #include <cstdlib>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <fcntl.h>
+#include <cerrno>
+#include <cstring>
+#include <string>
 #include "tsk/populate_tsk_inodes.h"
 #include "fs/populate_fs_inodes.h"
 #include "utils/inode_utils.h"
@@ -15,6 +23,19 @@ static std::string canonical(const char *path)
     std::string result(resolved);
     free(resolved);
     return result;
+}
+
+static void sync_target(const std::string &path)
+{
+    int fd = open(path.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
+    if (fd < 0)
+        throw std::runtime_error("Cannot open target directory for sync: " + path);
+    int result = syncfs(fd);
+    int saved = errno;
+    close(fd);
+    errno = saved;
+    if (result != 0)
+        throw std::runtime_error("Cannot flush target filesystem: " + path + ": " + std::strerror(errno));
 }
 
 int main(int argc, char *argv[])
@@ -53,8 +74,8 @@ int main(int argc, char *argv[])
         if (!S_ISBLK(vol_stat.st_mode) || vol_stat.st_rdev != root_stat.st_dev || root_stat.st_dev != start_stat.st_dev)
             throw std::runtime_error("Use the block device backing the scan directory; specify --mount-root for non-root mounts");
         InodePaths raw, mounted;
-        // Flush pending changes, but do not globally drop the machine's caches.
-        sync();
+        // Flush only the target filesystem; do not disturb unrelated mounts.
+        sync_target(start);
         populate_tsk_inodes(volume.c_str(), inside, start, static_cast<Inode>(start_stat.st_ino), raw);
         populate_fs_inodes(start.c_str(), mounted);
         const bool color = use_color(color_mode, STDOUT_FILENO);

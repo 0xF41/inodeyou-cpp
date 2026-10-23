@@ -144,11 +144,11 @@ When collection fails, the program reports `INCOMPLETE` and suppresses the compa
 
 ## Scope and limitations
 
-- **Linux block-device workflow:** the CLI requires the block device backing the mounted scan directory. Whole-disk images with partition offsets and standalone image files are not supported CLI inputs.
+- **Linux block-device workflow:** the CLI requires the block device backing the mounted scan directory. Raw-device parsing is used; whole-disk images with partition offsets and standalone image files are not supported CLI inputs.
 - **Filesystem support:** parsing depends on the installed TSK version. The automated integration test exercises ext4; other filesystem formats have not been established as working by that test.
 - **Live observations:** the two walks are sequential, not an atomic snapshot. Writes, renames, deletions, and inode reuse can affect results. Flushing pending writes does not eliminate those races.
-- **Nested mounts:** crossing onto another device produces an incomplete result. Avoid nested mounts, including same-device bind mounts, in the selected tree; device checks do not identify every bind-mount boundary.
-- **Traversal bounds:** directory traversal is depth-limited. TSK directory cycles are rejected. An inaccessible directory or missing metadata makes the scan incomplete.
+- **Nested mounts and bind mounts:** the mounted walk checks the mount identity of each directory and stops if it crosses a mount boundary. A changed directory identity, symlink substitution, or traversal cycle also produces an incomplete result.
+- **Traversal bounds:** mounted traversal is capped at 1,000,000 entries and depth 256; TSK directory cycles are rejected. An inaccessible directory or missing metadata makes the scan incomplete.
 - **Inventory scope:** the starting directory itself is excluded from both inventories. TSK unallocated entries and virtual entries are excluded; this is not a deleted-file recovery tool.
 - **Shared trust boundary:** raw-device reads and mounted enumeration both rely on the same running kernel. A compromised kernel may manipulate either view.
 
@@ -160,3 +160,7 @@ Adapted from the original **inodeyou** project:
 - Historical documentation: `hxxp[://]www[.]unixist[.]com/security/detecting-hidden-files/index[.]html` (previously unavailable).
 
 Raw filesystem parsing is provided by [The Sleuth Kit](https://www.sleuthkit.org/).
+
+## License
+
+GPL-3.0-only. See [LICENSE](LICENSE).

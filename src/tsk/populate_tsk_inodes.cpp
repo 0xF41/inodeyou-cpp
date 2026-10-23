@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 #include "populate_tsk_inodes.h"
 #include "tsk_walk_path.h"
 #include <memory>
@@ -8,7 +9,7 @@ void populate_tsk_inodes(const char *volume, const std::string &inside,
                          const std::string &mounted, Inode expected_inode, InodePaths &paths)
 {
     std::unique_ptr<TSK_IMG_INFO, decltype(&tsk_img_close)> img(
-        tsk_img_open_utf8_sing(volume, TSK_IMG_TYPE_DETECT, 0), tsk_img_close);
+        tsk_img_open_utf8_sing(volume, TSK_IMG_TYPE_RAW, 0), tsk_img_close);
     if (!img) throw std::runtime_error("TSK could not open volume");
     std::unique_ptr<TSK_FS_INFO, decltype(&tsk_fs_close)> fs(
         tsk_fs_open_img(img.get(), 0, TSK_FS_TYPE_DETECT), tsk_fs_close);

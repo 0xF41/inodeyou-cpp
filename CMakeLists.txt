@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-only
 cmake_minimum_required(VERSION 3.10)
 
 # Set the project name
@@ -17,7 +18,6 @@ set(SOURCES
     src/fs/populate_fs_inodes.cpp
     src/tsk/tsk_walk_path.cpp
     src/tsk/populate_tsk_inodes.cpp
-    src/utils/common.cpp
     src/utils/inode_utils.cpp
 )
 

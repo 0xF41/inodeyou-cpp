@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 #include "tsk_walk_path.h"
 #include <memory>
 #include <cstring>
@@ -18,7 +19,8 @@ void tsk_walk_path(TSK_FS_INFO *fs, TSK_INUM_T inode, const std::string &path,
             throw std::runtime_error("TSK returned an invalid directory entry");
         if (!(file->name->flags & TSK_FS_NAME_FLAG_ALLOC)) continue;
         const char *name = file->name->name;
-        if (!strcmp(name, ".") || !strcmp(name, "..")) continue;
+        if (!strcmp(name, ".") || !strcmp(name, "..") ||
+            !strcmp(name, "$OrphanFiles")) continue;
         if (!file->meta) throw std::runtime_error("TSK entry metadata unavailable");
         if (file->meta->type == TSK_FS_META_TYPE_VIRT ||
             file->meta->type == TSK_FS_META_TYPE_VIRT_DIR) continue;
