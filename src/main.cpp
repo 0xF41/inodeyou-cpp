@@ -15,6 +15,7 @@
 #include "fs/populate_fs_inodes.h"
 #include "utils/inode_utils.h"
 #include "utils/output.h"
+#include "utils/unique_fd.h"
 
 static std::string canonical(const char *path)
 {
@@ -25,15 +26,9 @@ static std::string canonical(const char *path)
     return result;
 }
 
-static void sync_target(const std::string &path)
+static void sync_target(int fd, const std::string &path)
 {
-    int fd = open(path.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
-    if (fd < 0)
-        throw std::runtime_error("Cannot open target directory for sync: " + path);
     int result = syncfs(fd);
-    int saved = errno;
-    close(fd);
-    errno = saved;
     if (result != 0)
         throw std::runtime_error("Cannot flush target filesystem: " + path + ": " + std::strerror(errno));
 }
@@ -73,11 +68,22 @@ int main(int argc, char *argv[])
             throw std::runtime_error("Mount root and starting path must be directories");
         if (!S_ISBLK(vol_stat.st_mode) || vol_stat.st_rdev != root_stat.st_dev || root_stat.st_dev != start_stat.st_dev)
             throw std::runtime_error("Use the block device backing the scan directory; specify --mount-root for non-root mounts");
+        UniqueFd start_fd(open(start.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW));
+        if (start_fd.get() < 0)
+            throw std::runtime_error("Cannot open starting directory: " + start);
+        struct stat opened;
+        if (fstat(start_fd.get(), &opened) != 0)
+            throw std::runtime_error("Cannot inspect starting directory: " + start);
+        if (!S_ISDIR(opened.st_mode) || opened.st_dev != start_stat.st_dev ||
+            opened.st_ino != start_stat.st_ino)
+            throw std::runtime_error("Starting directory identity changed: " + start);
+
         InodePaths raw, mounted;
         // Flush only the target filesystem; do not disturb unrelated mounts.
-        sync_target(start);
+        sync_target(start_fd.get(), start);
         populate_tsk_inodes(volume.c_str(), inside, start, static_cast<Inode>(start_stat.st_ino), raw);
-        populate_fs_inodes(start.c_str(), mounted);
+        populate_fs_inodes(start_fd.release(), start, start_stat.st_dev,
+                           start_stat.st_ino, mounted);
         const bool color = use_color(color_mode, STDOUT_FILENO);
         std::cout << paint("[*] TSK inventory:", "36", color) << " "
                   << paint(std::to_string(raw.size()), "1;36", color) << " inodes.\n"

@@ -5,7 +5,8 @@
 #include <stdexcept>
 
 void tsk_walk_path(TSK_FS_INFO *fs, TSK_INUM_T inode, const std::string &path,
-                   InodePaths &paths, std::set<Inode> &ancestors, unsigned depth)
+                   InodePaths &paths, std::set<Inode> &ancestors,
+                   std::size_t &entries, unsigned depth)
 {
     if (depth > 256 || !ancestors.insert(static_cast<Inode>(inode)).second)
         throw std::runtime_error("TSK directory cycle/depth limit encountered");
@@ -26,9 +27,12 @@ void tsk_walk_path(TSK_FS_INFO *fs, TSK_INUM_T inode, const std::string &path,
             file->meta->type == TSK_FS_META_TYPE_VIRT_DIR) continue;
         const auto full = join_path(path, name);
         const auto number = static_cast<Inode>(file->meta->addr);
+        if (++entries > MAX_INVENTORY_ENTRIES)
+            throw std::runtime_error("Inventory entry limit exceeded");
         paths[number].insert(full);
         if (file->meta->type == TSK_FS_META_TYPE_DIR)
-            tsk_walk_path(fs, file->meta->addr, full, paths, ancestors, depth + 1);
+            tsk_walk_path(fs, file->meta->addr, full, paths, ancestors,
+                          entries, depth + 1);
     }
     ancestors.erase(static_cast<Inode>(inode));
 }

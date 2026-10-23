@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: GPL-3.0-only
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake libtsk-dev e2fsprogs
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      - name: Build
+        run: cmake --build build -j2
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  sanitize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake libtsk-dev e2fsprogs
+      - name: Configure sanitizers
+        run: cmake -S . -B build-san -DCMAKE_BUILD_TYPE=Debug -DINODEYOU_SANITIZE=ON
+      - name: Build sanitizers
+        run: cmake --build build-san -j2
+      - name: Test sanitizers
+        env:
+          ASAN_OPTIONS: detect_leaks=0:alloc_dealloc_mismatch=0
+        run: ctest --test-dir build-san --output-on-failure

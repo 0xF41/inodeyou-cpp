@@ -22,5 +22,6 @@ void populate_tsk_inodes(const char *volume, const std::string &inside,
     if (static_cast<Inode>(inode) != expected_inode)
         throw std::runtime_error("Raw/mounted starting inode mismatch; check volume and --mount-root");
     std::set<Inode> ancestors;
-    tsk_walk_path(fs.get(), inode, mounted, paths, ancestors);
+    std::size_t entries = 0;
+    tsk_walk_path(fs.get(), inode, mounted, paths, ancestors, entries);
 }

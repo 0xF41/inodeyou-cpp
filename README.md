@@ -142,13 +142,23 @@ Counts refer to unique inodes, not filenames. A single inode can have several re
 
 When collection fails, the program reports `INCOMPLETE` and suppresses the comparison instead of treating a partial inventory as a list of hidden entries.
 
+## Testing
+
+```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+Tests create an unmounted temporary ext4 image and exercise symlink-safe traversal. They require neither root privileges nor a rootkit. CI runs the same build plus an ASan/UBSan job.
+
 ## Scope and limitations
 
 - **Linux block-device workflow:** the CLI requires the block device backing the mounted scan directory. Raw-device parsing is used; whole-disk images with partition offsets and standalone image files are not supported CLI inputs.
 - **Filesystem support:** parsing depends on the installed TSK version. The automated integration test exercises ext4; other filesystem formats have not been established as working by that test.
 - **Live observations:** the two walks are sequential, not an atomic snapshot. Writes, renames, deletions, and inode reuse can affect results. Flushing pending writes does not eliminate those races.
-- **Nested mounts and bind mounts:** the mounted walk checks the mount identity of each directory and stops if it crosses a mount boundary. A changed directory identity, symlink substitution, or traversal cycle also produces an incomplete result.
-- **Traversal bounds:** mounted traversal is capped at 1,000,000 entries and depth 256; TSK directory cycles are rejected. An inaccessible directory or missing metadata makes the scan incomplete.
+- **Nested mounts and bind mounts:** the mounted walk checks the mount identity of each directory with `statx(STATX_MNT_ID)` and stops if it crosses a mount boundary. This requires Linux 5.8 or later; if mount identity is unavailable, the scan is incomplete. A changed directory identity, symlink substitution, or traversal cycle also produces an incomplete result.
+- **Traversal bounds:** both inventories are capped at 1,000,000 entries; mounted depth is limited to 256; directory cycles are rejected. An inaccessible directory or missing metadata makes the scan incomplete.
 - **Inventory scope:** the starting directory itself is excluded from both inventories. TSK unallocated entries and virtual entries are excluded; this is not a deleted-file recovery tool.
 - **Shared trust boundary:** raw-device reads and mounted enumeration both rely on the same running kernel. A compromised kernel may manipulate either view.
 
