@@ -3,6 +3,7 @@
 #define _GNU_SOURCE
 #endif
 #include "fs_walk_path.h"
+#include "../utils/syscalls.h"
 #include "../utils/unique_fd.h"
 #include <dirent.h>
 #include <fcntl.h>
@@ -11,9 +12,7 @@
 #include <cerrno>
 #include <cstring>
 #include <memory>
-#include <set>
 #include <stdexcept>
-#include <utility>
 
 namespace {
 
@@ -22,8 +21,6 @@ constexpr unsigned MAX_DEPTH = 256;
 struct DirCloser {
     void operator()(DIR *dir) const { if (dir) closedir(dir); }
 };
-
-using DirectoryId = std::pair<dev_t, ino_t>;
 
 [[noreturn]] void fail(const std::string &message)
 {
@@ -38,17 +35,15 @@ DirectoryId identity(const struct stat &st)
 unsigned long long mount_id(int fd)
 {
     struct statx stx;
-    if (statx(fd, "", AT_EMPTY_PATH, STATX_MNT_ID, &stx) != 0)
+    if (retry_statx(fd, "", AT_EMPTY_PATH, STATX_MNT_ID, &stx) != 0)
         fail("Cannot read directory mount identity");
     if (!(stx.stx_mask & STATX_MNT_ID) || stx.stx_mnt_id == 0)
         throw std::runtime_error("Mount identity unavailable; refusing ambiguous traversal");
     return stx.stx_mnt_id;
 }
 
-void walk_dir(int fd, const std::string &path, dev_t device,
-              unsigned long long root_mount, InodePaths &paths,
-              std::set<DirectoryId> &ancestors, std::size_t &entries,
-              unsigned depth)
+void walk_dir(int fd, const std::string &path, WalkContext &context,
+              InodePaths &paths, unsigned depth)
 {
     UniqueFd owner(fd);
     if (depth > MAX_DEPTH)
@@ -64,8 +59,7 @@ void walk_dir(int fd, const std::string &path, dev_t device,
         fail("Cannot obtain directory descriptor: " + path);
 
     while (true) {
-        errno = 0;
-        dirent *entry = readdir(dir.get());
+        dirent *entry = retry_readdir(dir.get());
         if (!entry) {
             if (errno)
                 fail("Mounted enumeration failed: " + path);
@@ -76,51 +70,48 @@ void walk_dir(int fd, const std::string &path, dev_t device,
 
         const std::string full = join_path(path, entry->d_name);
         struct stat st;
-        if (fstatat(dir_fd, entry->d_name, &st, AT_SYMLINK_NOFOLLOW) != 0)
+        if (retry_fstatat(dir_fd, entry->d_name, &st, AT_SYMLINK_NOFOLLOW) != 0)
             fail("Cannot stat mounted entry: " + full);
-        if (++entries > MAX_INVENTORY_ENTRIES)
-            throw std::runtime_error("Inventory entry limit exceeded");
-
+        context.budget.add(full);
         paths[static_cast<Inode>(st.st_ino)].insert(full);
 
         if (!S_ISDIR(st.st_mode)) {
-            if (st.st_dev != device)
+            if (st.st_dev != context.device)
                 throw std::runtime_error("Nested filesystem encountered: " + full);
             continue;
         }
 
         const DirectoryId child_id = identity(st);
-        if (!ancestors.insert(child_id).second)
+        if (!context.ancestors.insert(child_id).second)
             throw std::runtime_error("Mounted directory cycle detected: " + full);
 
-        UniqueFd child(openat(dir_fd, entry->d_name,
-                              O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW));
+        UniqueFd child(retry_openat(dir_fd, entry->d_name,
+                                    O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW));
         if (child.get() < 0) {
-            ancestors.erase(child_id);
+            context.ancestors.erase(child_id);
             fail("Cannot open mounted directory: " + full);
         }
 
         struct stat opened;
-        if (fstat(child.get(), &opened) != 0) {
-            ancestors.erase(child_id);
+        if (retry_fstat(child.get(), &opened) != 0) {
+            context.ancestors.erase(child_id);
             fail("Cannot inspect mounted directory: " + full);
         }
         if (identity(opened) != child_id || !S_ISDIR(opened.st_mode)) {
-            ancestors.erase(child_id);
+            context.ancestors.erase(child_id);
             throw std::runtime_error("Mounted directory identity changed during traversal: " + full);
         }
-        if (opened.st_dev != device) {
-            ancestors.erase(child_id);
+        if (opened.st_dev != context.device) {
+            context.ancestors.erase(child_id);
             throw std::runtime_error("Nested filesystem encountered: " + full);
         }
-        if (mount_id(child.get()) != root_mount) {
-            ancestors.erase(child_id);
+        if (mount_id(child.get()) != context.root_mount) {
+            context.ancestors.erase(child_id);
             throw std::runtime_error("Mount boundary encountered: " + full);
         }
 
-        walk_dir(child.release(), full, device, root_mount, paths, ancestors,
-                 entries, depth + 1);
-        ancestors.erase(child_id);
+        walk_dir(child.release(), full, context, paths, depth + 1);
+        context.ancestors.erase(child_id);
     }
 }
 
@@ -131,27 +122,26 @@ void fs_walk_fd(int fd, const std::string &path, dev_t expected_dev,
 {
     UniqueFd owner(fd);
     struct stat st;
-    if (fstat(owner.get(), &st) != 0 || !S_ISDIR(st.st_mode))
+    if (retry_fstat(owner.get(), &st) != 0 || !S_ISDIR(st.st_mode))
         fail("Starting path is not an accessible directory: " + path);
     if (st.st_dev != expected_dev || st.st_ino != expected_ino)
         throw std::runtime_error("Starting directory identity changed: " + path);
 
-    std::set<DirectoryId> ancestors;
-    ancestors.insert(identity(st));
-    std::size_t entries = 0;
-    const unsigned long long root_mount = mount_id(owner.get());
-    walk_dir(owner.release(), path, st.st_dev, root_mount, paths, ancestors,
-             entries, 0);
+    WalkContext context;
+    context.device = st.st_dev;
+    context.root_mount = mount_id(owner.get());
+    context.ancestors.insert(identity(st));
+    walk_dir(owner.release(), path, context, paths, 0);
 }
 
 void fs_walk_root(const std::string &path, InodePaths &paths)
 {
-    UniqueFd fd(open(path.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW));
+    UniqueFd fd(retry_open(path.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW));
     if (fd.get() < 0)
         fail("Cannot open mounted directory: " + path);
 
     struct stat st;
-    if (fstat(fd.get(), &st) != 0 || !S_ISDIR(st.st_mode))
+    if (retry_fstat(fd.get(), &st) != 0 || !S_ISDIR(st.st_mode))
         fail("Starting path is not an accessible directory: " + path);
 
     fs_walk_fd(fd.release(), path, st.st_dev, st.st_ino, paths);

@@ -41,7 +41,7 @@ The executable is in **`build/inodeyou`**.
 ## Usage
 
 ```text
-sudo ./build/inodeyou <volume> [directory] [--mount-root <mountpoint>]
+sudo ./build/inodeyou <volume> [directory] [--mount-root <mountpoint>] [--fs-type TYPE] [--color MODE]
 ```
 
 | Argument | Meaning |
@@ -49,6 +49,8 @@ sudo ./build/inodeyou <volume> [directory] [--mount-root <mountpoint>]
 | `volume` | The block device containing the mounted filesystem, such as a partition or logical volume. |
 | `directory` | The directory tree to compare. Defaults to the mount root when omitted. |
 | `--mount-root` | Where the volume's filesystem root is mounted. Defaults to `/`. |
+| `--fs-type` | Optional parser restriction: `auto`, `ext4`, `ext3`, `ext2`, `ntfs`, `fat`, `exfat`, `hfs`, `ufs`, `yaffs2`, or `apfs`. Defaults to `auto`. |
+| `--color` | `auto`, `always`, or `never`. Defaults to `auto`. |
 
 Display usage without root privileges:
 
@@ -72,6 +74,12 @@ echo $?
 ```
 
 Use an existing, small directory with minimal activity for the initial comparison.
+For a known ext4 filesystem, restricting the parser is faster and reduces the
+amount of third-party parsing code exposed to the volume:
+
+```sh
+sudo ./build/inodeyou /dev/sda2 /var/lib/demo --fs-type ext4
+```
 
 ### Filesystem mounted elsewhere
 
@@ -158,7 +166,7 @@ Tests create an unmounted temporary ext4 image and exercise symlink-safe travers
 - **Filesystem support:** parsing depends on the installed TSK version. The automated integration test exercises ext4; other filesystem formats have not been established as working by that test.
 - **Live observations:** the two walks are sequential, not an atomic snapshot. Writes, renames, deletions, and inode reuse can affect results. Flushing pending writes does not eliminate those races.
 - **Nested mounts and bind mounts:** the mounted walk checks the mount identity of each directory with `statx(STATX_MNT_ID)` and stops if it crosses a mount boundary. This requires Linux 5.8 or later; if mount identity is unavailable, the scan is incomplete. A changed directory identity, symlink substitution, or traversal cycle also produces an incomplete result.
-- **Traversal bounds:** both inventories are capped at 1,000,000 entries; mounted depth is limited to 256; directory cycles are rejected. An inaccessible directory or missing metadata makes the scan incomplete.
+- **Traversal bounds:** both inventories are capped at 1,000,000 entries and 256 MiB of recorded path bytes; mounted depth is limited to 256; directory cycles are rejected. An inaccessible directory or missing metadata makes the scan incomplete.
 - **Inventory scope:** the starting directory itself is excluded from both inventories. TSK unallocated entries and virtual entries are excluded; this is not a deleted-file recovery tool.
 - **Shared trust boundary:** raw-device reads and mounted enumeration both rely on the same running kernel. A compromised kernel may manipulate either view.
 

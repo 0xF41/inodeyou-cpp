@@ -9,6 +9,13 @@ public:
     ~UniqueFd() { reset(); }
     UniqueFd(const UniqueFd &) = delete;
     UniqueFd &operator=(const UniqueFd &) = delete;
+    UniqueFd(UniqueFd &&other) noexcept : fd_(other.release()) {}
+    UniqueFd &operator=(UniqueFd &&other) noexcept
+    {
+        if (this != &other)
+            reset(other.release());
+        return *this;
+    }
 
     int get() const { return fd_; }
     int release()

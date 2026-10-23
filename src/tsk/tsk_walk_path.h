@@ -5,5 +5,5 @@
 #include "../utils/inode_utils.h"
 void tsk_walk_path(TSK_FS_INFO *fs, TSK_INUM_T inode, const std::string &path,
                    InodePaths &paths, std::set<Inode> &ancestors,
-                   std::size_t &entries, unsigned depth = 0);
+                   InventoryBudget &budget, unsigned depth = 0);
 #endif

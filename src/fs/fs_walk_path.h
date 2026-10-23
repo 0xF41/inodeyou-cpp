@@ -2,8 +2,19 @@
 #ifndef FS_WALK_PATH_H
 #define FS_WALK_PATH_H
 #include "../utils/inode_utils.h"
+#include <set>
 #include <string>
 #include <sys/types.h>
+#include <utility>
+
+using DirectoryId = std::pair<dev_t, ino_t>;
+
+struct WalkContext {
+    dev_t device;
+    unsigned long long root_mount;
+    std::set<DirectoryId> ancestors;
+    InventoryBudget budget;
+};
 
 // Open and verify a path before walking the mounted view.
 void fs_walk_root(const std::string &path, InodePaths &paths);

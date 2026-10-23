@@ -74,6 +74,30 @@ int main()
             has_prefix(paths, inside_link + "/") ||
             has_prefix(paths, loop + "/"))
             throw std::runtime_error("symlink was followed");
+
+        InventoryBudget entries;
+        entries.max_entries = 1;
+        entries.add("one");
+        bool limited = false;
+        try {
+            entries.add("two");
+        } catch (const std::runtime_error &) {
+            limited = true;
+        }
+        if (!limited)
+            throw std::runtime_error("entry budget not enforced");
+
+        InventoryBudget bytes;
+        bytes.max_path_bytes = 3;
+        bytes.add("abc");
+        limited = false;
+        try {
+            bytes.add("d");
+        } catch (const std::runtime_error &) {
+            limited = true;
+        }
+        if (!limited)
+            throw std::runtime_error("path-byte budget not enforced");
         status = 0;
     } catch (const std::exception &error) {
         std::cerr << error.what() << '\n';

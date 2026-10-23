@@ -41,7 +41,7 @@ set(SHARED_SOURCES
     src/tsk/populate_tsk_inodes.cpp
 )
 
-add_executable(inodeyou src/main.cpp ${SHARED_SOURCES})
+add_executable(inodeyou src/main.cpp src/options.cpp ${SHARED_SOURCES})
 target_include_directories(inodeyou PRIVATE src src/fs src/tsk src/utils)
 target_link_libraries(inodeyou ${TSK_LIB})
 inodeyou_harden(inodeyou)
@@ -59,3 +59,8 @@ add_executable(traversal_tests tests/traversal_tests.cpp
 target_include_directories(traversal_tests PRIVATE src src/fs src/utils)
 inodeyou_harden(traversal_tests)
 add_test(NAME traversal COMMAND traversal_tests)
+
+add_executable(options_tests tests/options_tests.cpp src/options.cpp)
+target_include_directories(options_tests PRIVATE src)
+inodeyou_harden(options_tests)
+add_test(NAME options COMMAND options_tests)

@@ -49,6 +49,9 @@ int main(int argc, char **argv) {
         InodePaths disk, live;
         std::string base(argv[2]);
         populate_tsk_inodes(argv[1], "/", base, 2, disk);
+        InodePaths explicit_ext4;
+        populate_tsk_inodes(argv[1], "/", base, 2, explicit_ext4, TSK_FS_TYPE_EXT4);
+        require(explicit_ext4 == disk);
         populate_fs_inodes(base.c_str(), live);
         for (const auto *inventory : {&disk, &live}) {
             require(find_path(*inventory, base + "/nested/file") == find_path(*inventory, base + "/alias"));
